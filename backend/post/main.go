@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/pprof"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 )
@@ -126,6 +127,9 @@ func main() {
 
 	// Start Fiber
 	app := fiber.New()
+	if os.Getenv("DEBUG") == "true" {
+		app.Use(pprof.New())
+	}
 	v1 := app.Group("/v1")
 	v1.Post("/posts/:id/like", authMiddleware, postLikeValidator, postLikeHandler)
 
