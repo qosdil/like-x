@@ -9,12 +9,12 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/pprof"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 )
 
 var (
-	ctx     context.Context
 	pgxPool *pgxpool.Pool
 )
 
@@ -62,25 +62,19 @@ var postLikeValidator = func(c fiber.Ctx) error {
 	}
 
 	// Validate post existence
-	var exists bool
-	err := pgxPool.QueryRow(c.Context(), "SELECT EXISTS(SELECT 1 FROM posts WHERE id = $1)", postID).Scan(&exists)
+	var postOwnerID uint
+	err := pgxPool.QueryRow(c.Context(), "SELECT user_id FROM posts WHERE id = $1", postID).Scan(&postOwnerID)
+	if err == pgx.ErrNoRows {
+		return c.SendStatus(http.StatusNotFound)
+	}
 	if err != nil {
 		log.Printf("database error: %v", err)
 		return c.SendStatus(http.StatusInternalServerError)
-	}
-	if !exists {
-		return c.SendStatus(http.StatusNotFound)
 	}
 
 	authUserID := c.Locals("authUserID").(uint)
 
 	// Cannot like own post
-	var postOwnerID uint
-	err = pgxPool.QueryRow(c.Context(), "SELECT user_id FROM posts WHERE id = $1", postID).Scan(&postOwnerID)
-	if err != nil {
-		log.Printf("database error: %v", err)
-		return c.SendStatus(http.StatusInternalServerError)
-	}
 	if postOwnerID == authUserID {
 		return c.SendStatus(http.StatusForbidden)
 	}
@@ -103,7 +97,6 @@ var postLikeValidator = func(c fiber.Ctx) error {
 }
 
 func init() {
-	ctx = context.Background()
 	godotenv.Load()
 
 	// Set up pgx connection pool
@@ -116,7 +109,7 @@ func init() {
 		os.Getenv("X_CLONE_POSTGRES_SSLMODE"),
 	)
 	var err error
-	pgxPool, err = pgxpool.New(ctx, dbURL)
+	pgxPool, err = pgxpool.New(context.Background(), dbURL)
 	if err != nil {
 		panic(fmt.Sprintf("unable to create pgx pool: %v", err))
 	}
