@@ -171,3 +171,45 @@ Run the container:
 ```sh
 docker run --rm --env-file .env -p 3000:3000 --name x-clone-post-latest x-clone-post:latest
 ```
+
+## Simple, Local Load Testing
+
+If not present, add a Post with ID 1 and User ID 1:
+```sql
+INSERT INTO "public"."posts" ("id", "public_id", "post", "user_id") VALUES (1, 'abcd1234', 'Hi.', 1)
+```
+
+If not empty, reset `post_likes` table:
+```sql
+TRUNCATE TABLE post_likes RESTART IDENTITY;
+```
+
+Run the HTTP server with constrained resources for a lightweight load test:
+
+```sh
+GOMAXPROCS=0.05 GOMEMLIMIT=128MiB go run main.go
+```
+
+### Install vegeta
+
+Let's use `vegeta` for this load testing. Install via Homebrew (macOS/Linux), Go install, or download a binary:
+
+```sh
+# Homebrew (recommended on macOS)
+brew install vegeta
+
+# Go install (with Go 1.20+)
+go install github.com/tsenart/vegeta/v12@latest
+
+# Verify installation
+vegeta -version
+```
+
+Using vegeta, test the load with 1,000 RPS for 30 seconds, start with User ID 2:
+
+```sh
+seq 2 30001 \
+  | awk '{ printf "POST http://localhost:3000/v1/posts/abcd1234/like\nAuth-User-ID: %s\n\n", $1 }' \
+  | vegeta attack -rate=1000 -duration=30s -timeout=60s \
+  | vegeta report
+```
