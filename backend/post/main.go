@@ -12,33 +12,15 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
+	"github.com/qosdil/x-clone/backend/common/http/auth"
 )
 
 var (
 	pgxPool *pgxpool.Pool
 )
 
-// authMiddleware is a dummy authentication middleware that extracts the user ID from the "Auth-User-ID" header.
-var authMiddleware = func(c fiber.Ctx) error {
-	authUserID := fiber.GetReqHeader[uint](c, "Auth-User-ID")
-	if authUserID == 0 || authUserID > 100_000 { // We allow only user IDs from 1 to 100,000 for testing purposes
-		return c.SendStatus(http.StatusForbidden)
-	}
-
-	// Insert user if not exists (for testing purposes)
-	_, err := pgxPool.Exec(c.Context(), "INSERT INTO users (id) VALUES ($1) ON CONFLICT DO NOTHING", authUserID)
-	if err != nil {
-		log.Printf("database error: %v", err)
-		return c.SendStatus(http.StatusInternalServerError)
-	}
-
-	// Store in request-local context
-	c.Locals("authUserID", authUserID)
-	return c.Next()
-}
-
 var postLikeHandler = func(c fiber.Ctx) error {
-	authUserID := c.Locals("authUserID").(uint)
+	authUserID := c.Locals("auth_user_id").(uint)
 	postID := c.Locals("postID").(uint)
 	sql := "INSERT INTO post_likes (post_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING"
 	if os.Getenv("ASYNC_POST_LIKE") == "true" {
@@ -82,7 +64,7 @@ var postLikeValidator = func(c fiber.Ctx) error {
 		return c.SendStatus(http.StatusInternalServerError)
 	}
 
-	authUserID := c.Locals("authUserID").(uint)
+	authUserID := c.Locals("auth_user_id").(uint)
 
 	// Cannot like own post
 	if postOwnerID == authUserID {
@@ -134,7 +116,7 @@ func main() {
 		app.Use(pprof.New())
 	}
 	v1 := app.Group("/v1")
-	v1.Post("/posts/:id/like", authMiddleware, postLikeValidator, postLikeHandler)
+	v1.Post("/posts/:id/like", auth.AuthMiddleware, postLikeValidator, postLikeHandler)
 
 	log.Fatal(app.Listen(":" + os.Getenv("X_CLONE_HTTP_SERVER_PORT")))
 }
