@@ -89,7 +89,7 @@ var postLikeValidator = func(c fiber.Ctx) error {
 	return c.Next()
 }
 
-func init() {
+func main() {
 	godotenv.Load()
 
 	// Set up pgx connection pool
@@ -106,9 +106,6 @@ func init() {
 	if err != nil {
 		panic(fmt.Sprintf("unable to create pgx pool: %v", err))
 	}
-}
-
-func main() {
 	defer pgxPool.Close()
 
 	// Start Fiber
