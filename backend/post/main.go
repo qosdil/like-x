@@ -12,7 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
-	"github.com/qosdil/x-clone/backend/common/http/auth"
+	"github.com/qosdil/like-x/backend/common/http/auth"
 )
 
 var (
@@ -94,12 +94,12 @@ func main() {
 
 	// Set up pgx connection pool
 	dbURL := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
-		os.Getenv("X_CLONE_POSTGRES_USER"),
-		os.Getenv("X_CLONE_POSTGRES_PASSWORD"),
-		os.Getenv("X_CLONE_POSTGRES_HOST"),
-		os.Getenv("X_CLONE_POSTGRES_PORT"),
-		os.Getenv("X_CLONE_POSTGRES_DB_NAME"),
-		os.Getenv("X_CLONE_POSTGRES_SSL_MODE"),
+		os.Getenv("LIKE_X_POSTGRES_USER"),
+		os.Getenv("LIKE_X_POSTGRES_PASSWORD"),
+		os.Getenv("LIKE_X_POSTGRES_HOST"),
+		os.Getenv("LIKE_X_POSTGRES_PORT"),
+		os.Getenv("LIKE_X_POSTGRES_DB_NAME"),
+		os.Getenv("LIKE_X_POSTGRES_SSL_MODE"),
 	)
 	var err error
 	pgxPool, err = pgxpool.New(context.Background(), dbURL)
@@ -111,10 +111,10 @@ func main() {
 	// Start Fiber
 	app := fiber.New()
 	if os.Getenv("DEBUG") == "true" {
-		app.Use(pprof.New(pprof.Config{Prefix: os.Getenv("X_CLONE_POST_PPROF_HTTP_PREFIX")}))
+		app.Use(pprof.New(pprof.Config{Prefix: os.Getenv("LIKE_X_POST_PPROF_HTTP_PREFIX")}))
 	}
 	v1 := app.Group("/v1")
 	v1.Post("/posts/:public_id/like", auth.AuthMiddleware, postLikeValidator, postLikeHandler)
 
-	log.Fatal(app.Listen(":" + os.Getenv("X_CLONE_HTTP_SERVER_PORT")))
+	log.Fatal(app.Listen(":" + os.Getenv("LIKE_X_HTTP_SERVER_PORT")))
 }

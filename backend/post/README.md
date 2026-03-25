@@ -1,6 +1,6 @@
-# x-clone Backend (post)
+# like-x Backend (post)
 
-This directory contains the backend service for the `post` component of the x-clone project.
+This directory contains the backend service for the `post` component of the like-x project.
 
 ## Overview
 
@@ -77,13 +77,13 @@ Create a `.env` file based on `.env.example`:
 
 - `ASYNC_POST_LIKE`: Enable asynchronous post liking (default: false)
 - `DEBUG`: Enable debug mode with pprof middleware (default: false)
-- `X_CLONE_HTTP_SERVER_PORT`: HTTP server port (default: 3000)
-- `X_CLONE_POSTGRES_HOST`: PostgreSQL host
-- `X_CLONE_POSTGRES_PORT`: PostgreSQL port
-- `X_CLONE_POSTGRES_SSL_MODE`: SSL mode for PostgreSQL connection
-- `X_CLONE_POSTGRES_USER`: PostgreSQL username
-- `X_CLONE_POSTGRES_PASSWORD`: PostgreSQL password
-- `X_CLONE_POSTGRES_DB_NAME`: PostgreSQL database name
+- `LIKE_X_HTTP_SERVER_PORT`: HTTP server port (default: 3000)
+- `LIKE_X_POSTGRES_HOST`: PostgreSQL host
+- `LIKE_X_POSTGRES_PORT`: PostgreSQL port
+- `LIKE_X_POSTGRES_SSL_MODE`: SSL mode for PostgreSQL connection
+- `LIKE_X_POSTGRES_USER`: PostgreSQL username
+- `LIKE_X_POSTGRES_PASSWORD`: PostgreSQL password
+- `LIKE_X_POSTGRES_DB_NAME`: PostgreSQL database name
 
 ### Setup
 
@@ -96,7 +96,7 @@ Create a `.env` file based on `.env.example`:
 
 3. Initialize the database:
    ```sh
-   psql -U postgres -h localhost -d x_clone_post -f schema.sql
+   psql -U postgres -h localhost -d like_x_post -f schema.sql
    ```
 
 4. Build the service:
@@ -115,14 +115,14 @@ A multi-stage `Dockerfile` is provided for building and running the service in a
 
 Build the image from the `post` directory:
 ```sh
-docker build -t x-clone-post .
+docker build -t like-x-post .
 ```
 
 Adjust ports and environment variables (see `.env.example`) as needed by the application.
 
 Run the container:
 ```sh
-docker run --rm --env-file .env -p 3000:3000 --name x-clone-post-latest x-clone-post:latest
+docker run --rm --env-file .env -p 3000:3000 --name like-x-post-latest like-x-post:latest
 ```
 
 ## Simple, Local Load Testing
@@ -173,7 +173,7 @@ This service includes **pprof** middleware for profiling and debugging.
 
 ### Enable pprof
 
- Enable it via the `DEBUG` environment variable to analyze CPU usage, memory allocations, goroutines, and more. Optionally, you can also set `X_CLONE_POST_PPROF_HTTP_PREFIX` for better security on production.
+ Enable it via the `DEBUG` environment variable to analyze CPU usage, memory allocations, goroutines, and more. Optionally, you can also set `LIKE_X_POST_PPROF_HTTP_PREFIX` for better security on production.
 
 Restart the server, then pprof endpoints will be available at `{prefix}/debug/pprof` path.
 

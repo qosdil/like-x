@@ -1,4 +1,4 @@
-module xclonepost
+module likexpost
 
 go 1.26.0
 
@@ -6,7 +6,7 @@ require (
 	github.com/gofiber/fiber/v3 v3.1.0
 	github.com/jackc/pgx/v5 v5.8.0
 	github.com/joho/godotenv v1.5.1
-	github.com/qosdil/x-clone/backend/common/http v0.0.0-20260324112421-a45f6adf867c
+	github.com/qosdil/like-x/backend/common/http v0.0.0-20260325085950-04b47a5be9ca
 )
 
 require (
