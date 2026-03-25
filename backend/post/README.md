@@ -166,3 +166,40 @@ seq 2 30001 \
   | vegeta attack -rate=1000 -duration=30s -timeout=60s \
   | vegeta report
 ```
+
+## Debugging with pprof
+
+This service includes **pprof** middleware for profiling and debugging.
+
+### Enable pprof
+
+ Enable it via the `DEBUG` environment variable to analyze CPU usage, memory allocations, goroutines, and more. Optionally, you can also set `X_CLONE_POST_PPROF_HTTP_PREFIX` for better security on production.
+
+Restart the server, then pprof endpoints will be available at `{prefix}/debug/pprof` path.
+
+### Profiling Under Load
+
+1. **Start the service with DEBUG enabled:**
+   ```sh
+   DEBUG=true go run main.go
+   ```
+
+2. **In another terminal, start vegeta load test:**
+   ```sh
+   seq 2 30001 \
+     | awk '{ printf "POST http://localhost:3000/v1/posts/abcd1234/like\nAuth-User-ID: %s\n\n", $1 }' \
+     | vegeta attack -rate=1000 -duration=30s -timeout=60s \
+     | vegeta report &
+   ```
+
+3. **Collect CPU profile during the load:**
+   ```sh
+   go tool pprof http://localhost:3000/debug/pprof/profile?seconds=30
+   ```
+
+4. **Analyze results:**
+   ```
+   (pprof) top      # Identify bottlenecks
+   (pprof) list db  # Example: zoom into database code
+   (pprof) web      # Visualize call graph
+   ```
