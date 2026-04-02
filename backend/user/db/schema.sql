@@ -4,6 +4,7 @@ CREATE TABLE public.users (
     -- Designed for Nano ID (random, no timestamp, shorter than UUID)
     public_id text unique NOT NULL,
 
+    full_name VARCHAR(255) NOT NULL,
     password_hash VARCHAR(255),
     created_at timestamp without time zone DEFAULT now() NOT NULL,
     updated_at timestamp without time zone DEFAULT now() NOT NULL
