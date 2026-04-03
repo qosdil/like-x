@@ -8,14 +8,19 @@ import (
 	"likexuser/service"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/gofiber/fiber/v3"
+	likexService "github.com/qosdil/like-x/backend/common/service"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type fakeRepo struct {
 	createOutput user.CreateOutput
 	createErr    error
+	firstHash    string
+	firstErr     error
 }
 
 func (f fakeRepo) Create(ctx context.Context, input user.CreateInput) (user.CreateOutput, error) {
@@ -23,8 +28,7 @@ func (f fakeRepo) Create(ctx context.Context, input user.CreateInput) (user.Crea
 }
 
 func (f fakeRepo) FirstPasswordHashByPublicID(ctx context.Context, publicID user.PublicID) (string, error) {
-	// Not used by sign-up handler tests.
-	return "", nil
+	return f.firstHash, f.firstErr
 }
 
 func TestHandleSignUp_Success(t *testing.T) {
@@ -74,5 +78,59 @@ func TestHandleSignUp_BadRequest(t *testing.T) {
 	}
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Fatalf("expected status 400, got %d", resp.StatusCode)
+	}
+}
+
+func TestHandleAuthenticate_Success(t *testing.T) {
+	os.Setenv("JWT_SECRET_KEY", "supersecret")
+	defer os.Unsetenv("JWT_SECRET_KEY")
+
+	passHash, _ := bcrypt.GenerateFromPassword([]byte("secret123"), bcrypt.DefaultCost)
+	app := fiber.New()
+	fake := fakeRepo{firstHash: string(passHash)}
+	svc := service.NewService(fake)
+	h := NewHandler(svc)
+	app.Post("/v1/users/authenticate", h.HandleAuthenticate)
+
+	body := map[string]string{"id": "pub-1", "password": "secret123"}
+	b, _ := json.Marshal(body)
+	req := httptest.NewRequest(http.MethodPost, "/v1/users/authenticate", bytes.NewReader(b))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app test error: %v", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", resp.StatusCode)
+	}
+
+	var respBody map[string]string
+	if err := json.NewDecoder(resp.Body).Decode(&respBody); err != nil {
+		t.Fatalf("failed decode body: %v", err)
+	}
+	if respBody["token"] == "" {
+		t.Fatal("expected token in response")
+	}
+}
+
+func TestHandleAuthenticate_Unauthorized(t *testing.T) {
+	app := fiber.New()
+	fake := fakeRepo{firstErr: likexService.ErrNotFound}
+	svc := service.NewService(fake)
+	h := NewHandler(svc)
+	app.Post("/v1/users/authenticate", h.HandleAuthenticate)
+
+	body := map[string]string{"id": "pub-1", "password": "wrong"}
+	b, _ := json.Marshal(body)
+	req := httptest.NewRequest(http.MethodPost, "/v1/users/authenticate", bytes.NewReader(b))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app test error: %v", err)
+	}
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("expected status 401, got %d", resp.StatusCode)
 	}
 }

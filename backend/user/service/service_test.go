@@ -3,15 +3,19 @@ package service
 import (
 	"context"
 	user "likexuser/model"
+	"os"
 	"testing"
 
 	likexService "github.com/qosdil/like-x/backend/common/service"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type mockRepository struct {
 	createOutput user.CreateOutput
 	createErr    error
 	lastInput    user.CreateInput
+	firstHash    string
+	firstErr     error
 }
 
 func (m *mockRepository) Create(ctx context.Context, input user.CreateInput) (user.CreateOutput, error) {
@@ -20,8 +24,7 @@ func (m *mockRepository) Create(ctx context.Context, input user.CreateInput) (us
 }
 
 func (m *mockRepository) FirstPasswordHashByPublicID(ctx context.Context, publicID user.PublicID) (string, error) {
-	// Not used by SignUp tests.
-	return "", nil
+	return m.firstHash, m.firstErr
 }
 
 func TestSignUp_Valid(t *testing.T) {
@@ -64,5 +67,49 @@ func TestSignUp_RepositoryError(t *testing.T) {
 	_, err := svc.SignUp(context.Background(), user.CreateInput{FullName: "John Doe", Password: "secret123"})
 	if err != likexService.ErrInternal {
 		t.Fatalf("expected ErrInternal, got %v", err)
+	}
+}
+
+func TestAuthenticate_Success(t *testing.T) {
+	os.Setenv("JWT_SECRET_KEY", "supersecret")
+	defer os.Unsetenv("JWT_SECRET_KEY")
+
+	pwHash, _ := bcrypt.GenerateFromPassword([]byte("secret123"), bcrypt.DefaultCost)
+	m := &mockRepository{firstHash: string(pwHash)}
+	svc := NewService(m)
+
+	out, err := svc.Authenticate(context.Background(), user.AuthInput{PublicID: "pub-1", Password: "secret123"})
+	if err != nil {
+		t.Fatalf("expected nil error, got %v", err)
+	}
+	if out.Token == "" {
+		t.Fatal("expected token to be non-empty")
+	}
+}
+
+func TestAuthenticate_NotFound(t *testing.T) {
+	os.Setenv("JWT_SECRET_KEY", "supersecret")
+	defer os.Unsetenv("JWT_SECRET_KEY")
+
+	m := &mockRepository{firstErr: likexService.ErrNotFound}
+	svc := NewService(m)
+
+	_, err := svc.Authenticate(context.Background(), user.AuthInput{PublicID: "pub-1", Password: "secret123"})
+	if err != ErrInvalidCredentials {
+		t.Fatalf("expected ErrInvalidCredentials, got %v", err)
+	}
+}
+
+func TestAuthenticate_InvalidPassword(t *testing.T) {
+	os.Setenv("JWT_SECRET_KEY", "supersecret")
+	defer os.Unsetenv("JWT_SECRET_KEY")
+
+	pwHash, _ := bcrypt.GenerateFromPassword([]byte("otherpass"), bcrypt.DefaultCost)
+	m := &mockRepository{firstHash: string(pwHash)}
+	svc := NewService(m)
+
+	_, err := svc.Authenticate(context.Background(), user.AuthInput{PublicID: "pub-1", Password: "secret123"})
+	if err != ErrInvalidCredentials {
+		t.Fatalf("expected ErrInvalidCredentials, got %v", err)
 	}
 }
