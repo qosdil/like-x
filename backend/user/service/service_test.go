@@ -19,6 +19,11 @@ func (m *mockRepository) Create(ctx context.Context, input user.CreateInput) (us
 	return m.createOutput, m.createErr
 }
 
+func (m *mockRepository) FirstPasswordHashByPublicID(ctx context.Context, publicID user.PublicID) (string, error) {
+	// Not used by SignUp tests.
+	return "", nil
+}
+
 func TestSignUp_Valid(t *testing.T) {
 	m := &mockRepository{createOutput: user.CreateOutput{ID: 1, PublicID: "public-1"}}
 	svc := NewService(m)

@@ -22,6 +22,11 @@ func (f fakeRepo) Create(ctx context.Context, input user.CreateInput) (user.Crea
 	return f.createOutput, f.createErr
 }
 
+func (f fakeRepo) FirstPasswordHashByPublicID(ctx context.Context, publicID user.PublicID) (string, error) {
+	// Not used by sign-up handler tests.
+	return "", nil
+}
+
 func TestHandleSignUp_Success(t *testing.T) {
 	app := fiber.New()
 	fake := fakeRepo{createOutput: user.CreateOutput{ID: 1, PublicID: "pub-123"}}
