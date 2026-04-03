@@ -26,7 +26,7 @@ A Go microservice, uses Fiber (HTTP), pgx (PostgreSQL), and a clean repository-s
 - `POSTGRES_PORT`
 - `POSTGRES_DB_NAME`
 - `POSTGRES_SSL_MODE` (e.g. `disable`)
-- `HTTP_SERVER_PORT` (e.g. `3001`)
+- `HTTP_SERVER_PORT` (e.g. `3000`)
 
 ## Run
 
@@ -42,7 +42,7 @@ If using `.env` file, existing code loads it via `github.com/joho/godotenv`.
 Request:
 
 ```bash
-curl -X POST http://localhost:3001/v1/users/sign-up \
+curl -X POST http://localhost:3000/v1/users/sign-up \
   -H 'Content-Type: application/json' \
   -d '{"full_name":"John Doe","password":"secret123"}'
 ```
