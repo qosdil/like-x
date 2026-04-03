@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	gonanoid "github.com/matoous/go-nanoid/v2"
+	likexService "github.com/qosdil/like-x/backend/common/service"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -39,6 +40,23 @@ func (r *db) Create(ctx context.Context, input user.CreateInput) (output user.Cr
 	}
 
 	return user.CreateOutput{ID: id, PublicID: user.PublicID(publicID)}, nil
+}
+
+// FirstPasswordHashByPublicID retrieves the password hash for a user by their public ID.
+func (r *db) FirstPasswordHashByPublicID(ctx context.Context, publicID user.PublicID) (passwordHash string, err error) {
+	sql := "SELECT password_hash FROM users WHERE public_id = $1"
+	err = r.conn.QueryRow(ctx, sql, string(publicID)).Scan(&passwordHash)
+	if err == nil {
+		return
+	}
+
+	if err == pgx.ErrNoRows {
+		err = likexService.ErrNotFound
+		return
+	}
+
+	err = fmt.Errorf("failed to retrieve password hash: %v", err)
+	return
 }
 
 // NewPgx creates a Repository implementation backed by a pgx connection pool.

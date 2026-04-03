@@ -7,6 +7,17 @@ const (
 	PasswordMinLength = 8
 )
 
+// AuthInput contains fields for user authentication.
+type AuthInput struct {
+	PublicID `json:"id"`
+	Password string `json:"password"`
+}
+
+// AuthOutput contains the JWT token returned after successful authentication.
+type AuthOutput struct {
+	Token string `json:"token"`
+}
+
 // CreateInput contains fields for user registration.
 type CreateInput struct {
 	FullName `json:"full_name"`

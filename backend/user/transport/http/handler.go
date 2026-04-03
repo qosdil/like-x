@@ -13,6 +13,25 @@ import (
 // NewHandler creates an HTTP handler with the given service dependency.
 func NewHandler(svc *service.Service) *handler { return &handler{svc: svc} }
 
+// HandleAuthenticate handles authentication requests and returns a JWT token.
+func (h *handler) HandleAuthenticate(c fiber.Ctx) error {
+	req := new(user.AuthInput)
+	if err := c.Bind().Body(req); err != nil {
+		return c.SendStatus(http.StatusBadRequest)
+	}
+
+	auth, err := h.svc.Authenticate(c, *req)
+	if err == nil {
+		return httphandler.ObjResp(c, auth, nil)
+	}
+
+	if err == service.ErrInvalidCredentials {
+		return httphandler.ErrResp(c, http.StatusUnauthorized, "invalid_credentials", "Invalid credentials")
+	} else {
+		return httphandler.HandleCommonErrs(c, err)
+	}
+}
+
 // HandleSignUp handles sign-up requests, validates input, and returns HTTP response.
 func (h *handler) HandleSignUp(c fiber.Ctx) error {
 	req := new(user.CreateInput)
