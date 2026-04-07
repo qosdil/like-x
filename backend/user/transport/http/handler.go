@@ -32,6 +32,25 @@ func (h *handler) HandleAuthenticate(c fiber.Ctx) error {
 	}
 }
 
+// HandleInternalAuthenticate validates a JWT token and returns the internal user ID.
+func (h *handler) HandleInternalAuthenticate(c fiber.Ctx) error {
+	req := new(user.AuthInternalInput)
+	if err := c.Bind().Body(req); err != nil {
+		return c.SendStatus(http.StatusBadRequest)
+	}
+
+	auth, err := h.svc.AuthenticateInternal(c, req.Token)
+	if err == nil {
+		return httphandler.ObjResp(c, auth, nil)
+	}
+
+	if err == service.ErrInvalidToken {
+		return httphandler.ErrResp(c, http.StatusUnauthorized, "invalid_token", "Invalid token")
+	}
+
+	return httphandler.HandleCommonErrs(c, err)
+}
+
 // HandleSignUp handles sign-up requests, validates input, and returns HTTP response.
 func (h *handler) HandleSignUp(c fiber.Ctx) error {
 	req := new(user.CreateInput)

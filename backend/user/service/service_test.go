@@ -3,8 +3,10 @@ package service
 import (
 	"context"
 	user "likexuser/model"
+	"os"
 	"testing"
 
+	"github.com/qosdil/like-x/backend/common/http/auth"
 	likexService "github.com/qosdil/like-x/backend/common/service"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -15,6 +17,8 @@ type mockRepository struct {
 	lastInput    user.CreateInput
 	firstHash    string
 	firstErr     error
+	firstID      user.ID
+	firstIDErr   error
 }
 
 func (m *mockRepository) Create(ctx context.Context, input user.CreateInput) (user.CreateOutput, error) {
@@ -24,6 +28,10 @@ func (m *mockRepository) Create(ctx context.Context, input user.CreateInput) (us
 
 func (m *mockRepository) FirstPasswordHashByPublicID(ctx context.Context, publicID user.PublicID) (string, error) {
 	return m.firstHash, m.firstErr
+}
+
+func (m *mockRepository) FirstIDByPublicID(ctx context.Context, publicID user.PublicID) (user.ID, error) {
+	return m.firstID, m.firstIDErr
 }
 
 type fakeAuthenticator struct {
@@ -110,5 +118,39 @@ func TestAuthenticate_InvalidPassword(t *testing.T) {
 	_, err := svc.Authenticate(context.Background(), user.AuthInput{PublicID: "pub-1", Password: "secret123"})
 	if err != ErrInvalidCredentials {
 		t.Fatalf("expected ErrInvalidCredentials, got %v", err)
+	}
+}
+
+func TestAuthenticateInternal_Success(t *testing.T) {
+	os.Setenv("JWT_SECRET_KEY", "supersecretkeythatisatleast32characterslong")
+	defer os.Unsetenv("JWT_SECRET_KEY")
+
+	token, err := auth.GenerateJWT("pub-1")
+	if err != nil {
+		t.Fatalf("failed to generate token: %v", err)
+	}
+
+	m := &mockRepository{firstID: 42}
+	svc := NewService(fakeAuthenticator{token: "token"}, m)
+
+	out, err := svc.AuthenticateInternal(context.Background(), token)
+	if err != nil {
+		t.Fatalf("expected nil error, got %v", err)
+	}
+	if out.ID != 42 {
+		t.Fatalf("expected ID 42, got %d", out.ID)
+	}
+}
+
+func TestAuthenticateInternal_InvalidToken(t *testing.T) {
+	os.Setenv("JWT_SECRET_KEY", "supersecretkeythatisatleast32characterslong")
+	defer os.Unsetenv("JWT_SECRET_KEY")
+
+	m := &mockRepository{firstID: 42}
+	svc := NewService(fakeAuthenticator{token: "token"}, m)
+
+	_, err := svc.AuthenticateInternal(context.Background(), "bad.token.value")
+	if err != ErrInvalidToken {
+		t.Fatalf("expected ErrInvalidToken, got %v", err)
 	}
 }

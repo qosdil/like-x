@@ -42,6 +42,23 @@ func (r *db) Create(ctx context.Context, input user.CreateInput) (output user.Cr
 	return user.CreateOutput{ID: id, PublicID: user.PublicID(publicID)}, nil
 }
 
+// FirstIDByPublicID retrieves the internal numeric user ID for the given public ID.
+func (r *db) FirstIDByPublicID(ctx context.Context, publicID user.PublicID) (id user.ID, err error) {
+	sql := "SELECT id FROM users WHERE public_id = $1"
+	err = r.conn.QueryRow(ctx, sql, string(publicID)).Scan(&id)
+	if err == nil {
+		return
+	}
+
+	if err == pgx.ErrNoRows {
+		err = likexService.ErrNotFound
+		return
+	}
+
+	err = fmt.Errorf("failed to retrieve user id: %v", err)
+	return
+}
+
 // FirstPasswordHashByPublicID retrieves the password hash for a user by their public ID.
 func (r *db) FirstPasswordHashByPublicID(ctx context.Context, publicID user.PublicID) (passwordHash string, err error) {
 	sql := "SELECT password_hash FROM users WHERE public_id = $1"

@@ -50,6 +50,7 @@ func main() {
 	// Initialize the HTTP handler with the user service and repository dependencies.
 	h := httptransport.NewHandler(service.NewService(auth.NewAuth(), repository.NewPgx(pgxPool)))
 	v1.Post("/authenticate", h.HandleAuthenticate)
+	v1.Post("/internal/authenticate", h.HandleInternalAuthenticate)
 	v1.Post("/sign-up", h.HandleSignUp)
 
 	// Start the HTTP server and log any fatal errors.

@@ -18,6 +18,16 @@ type AuthOutput struct {
 	Token string `json:"token"`
 }
 
+// AuthInternalInput contains the token for server-to-server authentication.
+type AuthInternalInput struct {
+	Token string `json:"token"`
+}
+
+// AuthInternalOutput contains the internal response payload with user ID.
+type AuthInternalOutput struct {
+	ID ID `json:"id"`
+}
+
 // CreateInput contains fields for user registration.
 type CreateInput struct {
 	FullName `json:"full_name"`

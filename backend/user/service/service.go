@@ -7,12 +7,14 @@ import (
 	"likexuser/repository"
 	"log"
 
+	"github.com/qosdil/like-x/backend/common/http/auth"
 	likexService "github.com/qosdil/like-x/backend/common/service"
 	"golang.org/x/crypto/bcrypt"
 )
 
 var (
 	ErrInvalidCredentials = errors.New("invalid credentials")
+	ErrInvalidToken       = errors.New("invalid token")
 )
 
 // Service defines business logic for user-related operations.
@@ -54,6 +56,30 @@ func (s *Service) Authenticate(ctx context.Context, input user.AuthInput) (user.
 
 	log.Printf("authentication successful for user %v", input.PublicID)
 	return user.AuthOutput{Token: token}, nil
+}
+
+func (s *Service) AuthenticateInternal(ctx context.Context, authToken string) (user.AuthInternalOutput, error) {
+	publicIDStr, err := auth.ParsePublicIDFromToken(authToken)
+	if err != nil {
+		if errors.Is(err, auth.ErrInvalidToken) {
+			return user.AuthInternalOutput{}, ErrInvalidToken
+		}
+		log.Printf("failed to parse auth token: %v", err)
+		return user.AuthInternalOutput{}, likexService.ErrInternal
+	}
+	publicID := user.PublicID(publicIDStr)
+
+	id, err := s.repo.FirstIDByPublicID(ctx, publicID)
+	if err != nil {
+		if err == likexService.ErrNotFound {
+			log.Printf("debug: public_id %s not found in db", publicID)
+			return user.AuthInternalOutput{}, ErrInvalidToken
+		}
+		log.Printf("failed to get user id by public_id: %v", err)
+		return user.AuthInternalOutput{}, likexService.ErrInternal
+	}
+
+	return user.AuthInternalOutput{ID: id}, nil
 }
 
 // SignUp validates user input and creates a new user via the repository.

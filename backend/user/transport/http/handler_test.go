@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/qosdil/like-x/backend/common/http/auth"
 	likexService "github.com/qosdil/like-x/backend/common/service"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -21,6 +22,8 @@ type fakeRepo struct {
 	createErr    error
 	firstHash    string
 	firstErr     error
+	firstID      user.ID
+	firstIDErr   error
 }
 
 func (f fakeRepo) Create(ctx context.Context, input user.CreateInput) (user.CreateOutput, error) {
@@ -29,6 +32,10 @@ func (f fakeRepo) Create(ctx context.Context, input user.CreateInput) (user.Crea
 
 func (f fakeRepo) FirstPasswordHashByPublicID(ctx context.Context, publicID user.PublicID) (string, error) {
 	return f.firstHash, f.firstErr
+}
+
+func (f fakeRepo) FirstIDByPublicID(ctx context.Context, publicID user.PublicID) (user.ID, error) {
+	return f.firstID, f.firstIDErr
 }
 
 type fakeAuthenticator struct {
@@ -133,6 +140,69 @@ func TestHandleAuthenticate_Unauthorized(t *testing.T) {
 	body := map[string]string{"id": "pub-1", "password": "wrong"}
 	b, _ := json.Marshal(body)
 	req := httptest.NewRequest(http.MethodPost, "/v1/users/authenticate", bytes.NewReader(b))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app test error: %v", err)
+	}
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("expected status 401, got %d", resp.StatusCode)
+	}
+}
+
+func TestHandleInternalAuthenticate_Success(t *testing.T) {
+	os.Setenv("JWT_SECRET_KEY", "supersecretkeythatisatleast32characterslong")
+	defer os.Unsetenv("JWT_SECRET_KEY")
+
+	token, err := auth.GenerateJWT("pub-1")
+	if err != nil {
+		t.Fatalf("failed to generate token: %v", err)
+	}
+
+	app := fiber.New()
+	fake := fakeRepo{firstID: 42}
+	svc := service.NewService(fakeAuthenticator{token: "token"}, fake)
+	h := NewHandler(svc)
+	app.Post("/v1/users/internal/authenticate", h.HandleInternalAuthenticate)
+
+	body := map[string]string{"token": token}
+	b, _ := json.Marshal(body)
+	req := httptest.NewRequest(http.MethodPost, "/v1/users/internal/authenticate", bytes.NewReader(b))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app test error: %v", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", resp.StatusCode)
+	}
+
+	var respBody struct {
+		ID uint `json:"id"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&respBody); err != nil {
+		t.Fatalf("failed decode body: %v", err)
+	}
+	if respBody.ID != 42 {
+		t.Fatalf("expected id 42, got %d", respBody.ID)
+	}
+}
+
+func TestHandleInternalAuthenticate_Unauthorized(t *testing.T) {
+	os.Setenv("JWT_SECRET_KEY", "supersecretkeythatisatleast32characterslong")
+	defer os.Unsetenv("JWT_SECRET_KEY")
+
+	app := fiber.New()
+	fake := fakeRepo{firstIDErr: likexService.ErrNotFound}
+	svc := service.NewService(fakeAuthenticator{token: "token"}, fake)
+	h := NewHandler(svc)
+	app.Post("/v1/users/internal/authenticate", h.HandleInternalAuthenticate)
+
+	body := map[string]string{"token": "bad.token.value"}
+	b, _ := json.Marshal(body)
+	req := httptest.NewRequest(http.MethodPost, "/v1/users/internal/authenticate", bytes.NewReader(b))
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req)
