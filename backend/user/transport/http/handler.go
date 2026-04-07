@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/qosdil/like-x/backend/common/http/auth"
 	httphandler "github.com/qosdil/like-x/backend/common/http/handler"
 )
 
@@ -39,12 +40,12 @@ func (h *handler) HandleInternalAuthenticate(c fiber.Ctx) error {
 		return c.SendStatus(http.StatusBadRequest)
 	}
 
-	auth, err := h.svc.AuthenticateInternal(c, req.Token)
+	intAuth, err := h.svc.AuthenticateInternal(c, req.Token)
 	if err == nil {
-		return httphandler.ObjResp(c, auth, nil)
+		return httphandler.ObjResp(c, intAuth, nil)
 	}
 
-	if err == service.ErrInvalidToken {
+	if err == auth.ErrInvalidToken {
 		return httphandler.ErrResp(c, http.StatusUnauthorized, "invalid_token", "Invalid token")
 	}
 

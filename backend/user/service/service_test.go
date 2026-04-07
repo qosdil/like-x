@@ -150,7 +150,7 @@ func TestAuthenticateInternal_InvalidToken(t *testing.T) {
 	svc := NewService(fakeAuthenticator{token: "token"}, m)
 
 	_, err := svc.AuthenticateInternal(context.Background(), "bad.token.value")
-	if err != ErrInvalidToken {
+	if err != auth.ErrInvalidToken {
 		t.Fatalf("expected ErrInvalidToken, got %v", err)
 	}
 }

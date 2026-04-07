@@ -14,7 +14,6 @@ import (
 
 var (
 	ErrInvalidCredentials = errors.New("invalid credentials")
-	ErrInvalidToken       = errors.New("invalid token")
 )
 
 // Service defines business logic for user-related operations.
@@ -62,7 +61,7 @@ func (s *Service) AuthenticateInternal(ctx context.Context, authToken string) (u
 	publicIDStr, err := auth.ParsePublicIDFromToken(authToken)
 	if err != nil {
 		if errors.Is(err, auth.ErrInvalidToken) {
-			return user.AuthInternalOutput{}, ErrInvalidToken
+			return user.AuthInternalOutput{}, auth.ErrInvalidToken
 		}
 		log.Printf("failed to parse auth token: %v", err)
 		return user.AuthInternalOutput{}, likexService.ErrInternal
@@ -73,7 +72,7 @@ func (s *Service) AuthenticateInternal(ctx context.Context, authToken string) (u
 	if err != nil {
 		if err == likexService.ErrNotFound {
 			log.Printf("debug: public_id %s not found in db", publicID)
-			return user.AuthInternalOutput{}, ErrInvalidToken
+			return user.AuthInternalOutput{}, auth.ErrInvalidToken
 		}
 		log.Printf("failed to get user id by public_id: %v", err)
 		return user.AuthInternalOutput{}, likexService.ErrInternal
