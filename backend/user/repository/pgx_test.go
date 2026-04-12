@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"likexuser/model"
 	user "likexuser/model"
 	"testing"
 
@@ -51,15 +52,12 @@ func TestPgx_Create_Success(t *testing.T) {
 	conn := fakeConn{row: fakeRow{id: 42}}
 	repo := NewDbForTest(conn)
 
-	out, err := repo.Create(context.Background(), user.CreateInput{FullName: "John Doe", Password: "secret123"})
+	out, err := repo.Create(context.Background(), CreateInput{PublicID: "pub-123", FullName: "John Doe", PasswordHash: "hash"})
 	if err != nil {
 		t.Fatalf("expected nil error, got %v", err)
 	}
-	if out.ID != 42 {
-		t.Fatalf("expected ID=42, got %v", out.ID)
-	}
-	if out.PublicID == "" {
-		t.Fatal("expected non-empty PublicID")
+	if out != model.ID(42) {
+		t.Fatalf("expected ID=42, got %v", out)
 	}
 }
 
@@ -67,7 +65,7 @@ func TestPgx_Create_QueryError(t *testing.T) {
 	conn := fakeConn{row: fakeRow{err: pgx.ErrNoRows}}
 	repo := NewDbForTest(conn)
 
-	_, err := repo.Create(context.Background(), user.CreateInput{FullName: "John Doe", Password: "secret123"})
+	_, err := repo.Create(context.Background(), CreateInput{PublicID: "pub-123", FullName: "John Doe", PasswordHash: "hash"})
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}

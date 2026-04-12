@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	user "likexuser/model"
+	"likexuser/repository"
 	"likexuser/service"
 	"net/http"
 	"net/http/httptest"
@@ -18,7 +19,7 @@ import (
 )
 
 type fakeRepo struct {
-	createOutput user.CreateOutput
+	createOutput user.ID
 	createErr    error
 	firstHash    string
 	firstErr     error
@@ -26,7 +27,7 @@ type fakeRepo struct {
 	firstIDErr   error
 }
 
-func (f fakeRepo) Create(ctx context.Context, input user.CreateInput) (user.CreateOutput, error) {
+func (f fakeRepo) Create(ctx context.Context, input repository.CreateInput) (user.ID, error) {
 	return f.createOutput, f.createErr
 }
 
@@ -47,13 +48,20 @@ func (a fakeAuthenticator) CompareHashAndPassword(hash, password string) error {
 	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 }
 
+func (a fakeAuthenticator) GeneratePasswordHash(password string) (string, error) {
+	if a.err != nil {
+		return "", a.err
+	}
+	return "hash", nil
+}
+
 func (a fakeAuthenticator) GenerateToken(_ string) (string, error) {
 	return a.token, a.err
 }
 
 func TestHandleSignUp_Success(t *testing.T) {
 	app := fiber.New()
-	fake := fakeRepo{createOutput: user.CreateOutput{ID: 1, PublicID: "pub-123"}}
+	fake := fakeRepo{createOutput: user.ID(1)}
 	svc := service.NewService(fakeAuthenticator{token: "token"}, fakeAuthenticator{token: "token"}, fake)
 	h := NewHandler(svc)
 	app.Post("/v1/users/sign-up", h.HandleSignUp)
@@ -75,14 +83,14 @@ func TestHandleSignUp_Success(t *testing.T) {
 	if err := json.NewDecoder(resp.Body).Decode(&respBody); err != nil {
 		t.Fatalf("failed decode body: %v", err)
 	}
-	if respBody["id"] != "pub-123" {
-		t.Fatalf("expected id pub-123, got %q", respBody["id"])
+	if respBody["id"] == "" {
+		t.Fatal("expected non-empty id in response")
 	}
 }
 
 func TestHandleSignUp_BadRequest(t *testing.T) {
 	app := fiber.New()
-	fake := fakeRepo{createOutput: user.CreateOutput{}, createErr: nil}
+	fake := fakeRepo{createOutput: user.ID(0), createErr: nil}
 	svc := service.NewService(fakeAuthenticator{token: "token"}, fakeAuthenticator{token: "token"}, fake)
 	h := NewHandler(svc)
 	app.Post("/v1/users/sign-up", h.HandleSignUp)

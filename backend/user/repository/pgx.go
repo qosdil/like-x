@@ -7,9 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	gonanoid "github.com/matoous/go-nanoid/v2"
 	likexService "github.com/qosdil/like-x/backend/common/service"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type queryRowConn interface {
@@ -20,26 +18,15 @@ type db struct {
 	conn queryRowConn
 }
 
-// Create inserts a new user record and returns the created user output.
-func (r *db) Create(ctx context.Context, input user.CreateInput) (output user.CreateOutput, err error) {
+// Create inserts a new user into the database and returns the generated internal ID.
+func (r *db) Create(ctx context.Context, input CreateInput) (id user.ID, err error) {
 	sql := "INSERT INTO users (public_id, full_name, password_hash) VALUES ($1, $2, $3) RETURNING id"
-	var id user.ID
-	publicID, err := gonanoid.New()
+	err = r.conn.QueryRow(ctx, sql, input.PublicID, input.FullName, input.PasswordHash).Scan(&id)
 	if err != nil {
-		return user.CreateOutput{}, fmt.Errorf("failed to generate Nano ID: %v", err)
+		return user.ID(0), fmt.Errorf("failed to create user: %v", err)
 	}
 
-	hash, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
-	if err != nil {
-		return user.CreateOutput{}, fmt.Errorf("failed to hash password: %v", err)
-	}
-
-	err = r.conn.QueryRow(ctx, sql, publicID, input.FullName, hash).Scan(&id)
-	if err != nil {
-		return user.CreateOutput{}, fmt.Errorf("failed to create user: %v", err)
-	}
-
-	return user.CreateOutput{ID: id, PublicID: user.PublicID(publicID)}, nil
+	return id, nil
 }
 
 // FirstIDByPublicID retrieves the internal numeric user ID for the given public ID.

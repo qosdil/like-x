@@ -3,10 +3,12 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	user "likexuser/model"
 	"likexuser/repository"
 	"log"
 
+	gonanoid "github.com/matoous/go-nanoid/v2"
 	"github.com/qosdil/like-x/backend/common/http/auth"
 	likexService "github.com/qosdil/like-x/backend/common/service"
 )
@@ -93,13 +95,31 @@ func (s *Service) SignUp(ctx context.Context, input user.CreateInput) (user.Crea
 		return user.CreateOutput{}, likexService.ErrBadRequest
 	}
 
+	// Generate password hash and handle any errors.
+	hash, err := s.auth.GeneratePasswordHash(input.Password)
+	if err != nil {
+		return user.CreateOutput{}, fmt.Errorf("failed to hash password: %v", err)
+	}
+
+	// Generate a unique public ID for the new user and handle any errors.
+	publicIDStr, err := gonanoid.New()
+	if err != nil {
+		log.Printf("failed to generate Nano ID: %v", err)
+		return user.CreateOutput{}, likexService.ErrInternal
+	}
+	publicID := user.PublicID(publicIDStr)
+
 	// Create the user in the repository and handle any errors.
-	signUp, err := s.repo.Create(ctx, input)
+	id, err := s.repo.Create(ctx, repository.CreateInput{
+		PublicID:     publicID,
+		FullName:     input.FullName,
+		PasswordHash: string(hash),
+	})
 	if err != nil {
 		log.Printf("failed to sign up a user: %v", err)
 		return user.CreateOutput{}, likexService.ErrInternal
 	}
 
 	log.Printf("sign-up successful for %v, %v", input.FullName, input.Password)
-	return signUp, nil
+	return user.CreateOutput{ID: id, PublicID: publicID}, nil
 }

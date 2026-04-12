@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	user "likexuser/model"
+	"likexuser/repository"
 	"os"
 	"testing"
 
@@ -12,17 +13,15 @@ import (
 )
 
 type mockRepository struct {
-	createOutput user.CreateOutput
+	createOutput user.ID
 	createErr    error
-	lastInput    user.CreateInput
 	firstHash    string
 	firstErr     error
 	firstID      user.ID
 	firstIDErr   error
 }
 
-func (m *mockRepository) Create(ctx context.Context, input user.CreateInput) (user.CreateOutput, error) {
-	m.lastInput = input
+func (m *mockRepository) Create(ctx context.Context, input repository.CreateInput) (user.ID, error) {
 	return m.createOutput, m.createErr
 }
 
@@ -43,20 +42,30 @@ func (f fakeAuthenticator) CompareHashAndPassword(hash, password string) error {
 	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 }
 
+func (f fakeAuthenticator) GeneratePasswordHash(password string) (string, error) {
+	if f.err != nil {
+		return "", f.err
+	}
+	return "hash", nil
+}
+
 func (f fakeAuthenticator) GenerateToken(_ string) (string, error) {
 	return f.token, f.err
 }
 
 func TestSignUp_Valid(t *testing.T) {
-	m := &mockRepository{createOutput: user.CreateOutput{ID: 1, PublicID: "public-1"}}
+	m := &mockRepository{createOutput: user.ID(1)}
 	svc := NewService(fakeAuthenticator{token: "token"}, fakeAuthenticator{token: "token"}, m)
 
 	out, err := svc.SignUp(context.Background(), user.CreateInput{FullName: "John Doe", Password: "secret123"})
 	if err != nil {
 		t.Fatalf("expected nil error, got %v", err)
 	}
-	if out.PublicID != "public-1" {
-		t.Fatalf("expected public id 'public-1', got '%s'", out.PublicID)
+	if out.PublicID == "" {
+		t.Fatal("expected non-empty public id")
+	}
+	if out.ID != user.ID(1) {
+		t.Fatalf("expected ID=1, got %d", out.ID)
 	}
 }
 

@@ -7,10 +7,10 @@ require (
 	github.com/jackc/pgx/v5 v5.9.1
 	github.com/joho/godotenv v1.5.1
 	github.com/matoous/go-nanoid/v2 v2.1.0
-	github.com/qosdil/like-x/backend/common/auth v0.0.0-20260407032354-8310e279c993
+	github.com/qosdil/like-x/backend/common/auth v0.0.0-20260412135536-19bbeb86750a
 	github.com/qosdil/like-x/backend/common/http v0.0.0-20260407005304-db65a48d2ea4
 	github.com/qosdil/like-x/backend/common/service v0.0.0-20260407005304-db65a48d2ea4
-	golang.org/x/crypto v0.49.0
+	golang.org/x/crypto v0.50.0
 )
 
 require (
@@ -31,6 +31,6 @@ require (
 	github.com/valyala/fasthttp v1.69.0 // indirect
 	golang.org/x/net v0.52.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
-	golang.org/x/sys v0.42.0 // indirect
-	golang.org/x/text v0.35.0 // indirect
+	golang.org/x/sys v0.43.0 // indirect
+	golang.org/x/text v0.36.0 // indirect
 )
