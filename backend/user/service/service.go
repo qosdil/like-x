@@ -120,6 +120,6 @@ func (s *Service) SignUp(ctx context.Context, input user.CreateInput) (user.Crea
 		return user.CreateOutput{}, likexService.ErrInternal
 	}
 
-	log.Printf("sign-up successful for %v, %v", input.FullName, input.Password)
+	log.Printf("sign-up successful for %v", input.FullName)
 	return user.CreateOutput{ID: id, PublicID: publicID}, nil
 }
